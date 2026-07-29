@@ -16,13 +16,19 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ("email", "password", "first_name", "last_name", "phone")
 
     def create(self, validated_data):
-        first_name = validated_data.pop("first_name", "")
-        last_name = validated_data.pop("last_name", "")
-        phone = validated_data.pop("phone", "")
+        profile_data = {
+            "first_name": validated_data.pop("first_name", ""),
+            "last_name": validated_data.pop("last_name", ""),
+            "phone": validated_data.pop("phone", ""),
+        }
         user = User.objects.create_user(**validated_data)
-        Profile.objects.create(
-            user=user, first_name=first_name, last_name=last_name, phone=phone
-        )
+
+        profile = user.profile
+        profile.first_name = profile_data.get("first_name", "")
+        profile.last_name = profile_data.get("last_name", "")
+        profile.phone = profile_data.get("phone", "")
+        profile.save()
+
         return user
 
 
