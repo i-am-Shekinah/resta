@@ -29,12 +29,32 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source="profile.first_name", default="")
+    last_name = serializers.CharField(source="profile.last_name", default="")
+    phone = serializers.CharField(source="profile.phone", default="")
+    avatar = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ("id", "email", "role", "is_active", "created_at")
+        fields = (
+            "id",
+            "email",
+            "role",
+            "is_active",
+            "created_at",
+            "first_name",
+            "last_name",
+            "phone",
+            "avatar",
+        )
+
+    def get_avatar(self, obj):
+        if hasattr(obj, "profile") and obj.profile.avatar:
+            return obj.profile.avatar.url
+        return None
 
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ("first_name", "last_name", "phone")
+        fields = ("first_name", "last_name", "phone", "avatar")
