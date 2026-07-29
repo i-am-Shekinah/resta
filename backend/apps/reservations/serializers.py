@@ -4,8 +4,18 @@ from .models import Reservation
 from apps.tables.models import Table
 
 
+class TableInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Table
+        fields = ("id", "number", "capacity", "location")
+
+
 class ReservationSerializer(serializers.ModelSerializer):
     customer_email = serializers.EmailField(source="customer.email", read_only=True)
+    table_detail = TableInfoSerializer(source="table", read_only=True)
+    confirm_overlap = serializers.BooleanField(
+        write_only=True, required=False, default=False
+    )
 
     class Meta:
         model = Reservation
@@ -14,16 +24,19 @@ class ReservationSerializer(serializers.ModelSerializer):
             "customer",
             "customer_email",
             "table",
+            "table_detail",
             "date",
             "time",
             "party_size",
             "status",
             "notes",
             "created_at",
+            "confirm_overlap",
         )
         read_only_fields = ("customer", "created_at")
 
     def validate(self, data):
+        data.pop("confirm_overlap", False)
         table = data.get("table") or self.instance.table
         date = data.get("date") or self.instance.date
         time = data.get("time") or self.instance.time
@@ -54,3 +67,4 @@ class ReservationSerializer(serializers.ModelSerializer):
 class AvailabilityQuerySerializer(serializers.Serializer):
     date = serializers.DateField()
     party_size = serializers.IntegerField(min_value=1)
+    time = serializers.TimeField(required=False)

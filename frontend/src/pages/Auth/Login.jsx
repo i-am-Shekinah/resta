@@ -18,7 +18,9 @@ export default function Login() {
     try {
       await login(email, password);
       toast.success('Logged in!');
-      navigate('/');
+      const redirect = sessionStorage.getItem('redirect_after_login') || '/';
+      sessionStorage.removeItem('redirect_after_login');
+      navigate(redirect);
     } catch {
       toast.error('Invalid email or password');
     } finally {

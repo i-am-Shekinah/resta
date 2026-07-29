@@ -8,6 +8,7 @@ import {
   ChevronDown,
   LayoutDashboard,
   User,
+  Calendar,
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
@@ -130,6 +131,14 @@ export default function Navbar() {
                     >
                       <LayoutDashboard className="w-4 h-4 text-gray-400" />
                       Dashboard
+                    </Link>
+                    <Link
+                      to="/reservations/my"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      My Reservations
                     </Link>
                     <Link
                       to="/profile"

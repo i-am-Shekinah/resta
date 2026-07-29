@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -11,6 +11,7 @@ import Checkout from './pages/Checkout/Checkout';
 import Orders from './pages/Orders/Orders';
 import OrderDetail from './pages/Orders/OrderDetail';
 import Reservations from './pages/Reservations/Reservations';
+import MyReservations from './pages/Reservations/MyReservations';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -33,6 +34,7 @@ function App() {
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/orders/:id" element={<OrderDetail />} />
                 <Route path="/reservations" element={<Reservations />} />
+                <Route path="/reservations/my" element={<MyReservations />} />
                 <Route path="/auth/login" element={<Login />} />
                 <Route path="/auth/register" element={<Register />} />
                 <Route path="/dashboard/*" element={<Dashboard />} />

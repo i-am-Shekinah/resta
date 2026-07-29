@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -14,12 +14,34 @@ export default function Reservations() {
   const [time, setTime] = useState('18:00');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [confirmation, setConfirmation] = useState(null);
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('reservation_form');
+    if (saved) {
+      try {
+        const { date: d, partySize: p, selectedTable: s, time: t, notes: n } = JSON.parse(saved);
+        if (d) setDate(d);
+        if (p) setPartySize(p);
+        if (s) setSelectedTable(s);
+        if (t) setTime(t);
+        if (n) setNotes(n);
+      } catch { /* ignore */ }
+      sessionStorage.removeItem('reservation_form');
+    }
+  }, []);
 
   const { data: availability, refetch: checkAvailability } = useQuery({
-    queryKey: ['availability', date, partySize],
-    queryFn: () => client.get('/reservations/availability/', { params: { date, party_size: partySize } }).then((r) => r.data),
+    queryKey: ['availability', date, partySize, time],
+    queryFn: () => client.get('/reservations/availability/', { params: { date, party_size: partySize, time } }).then((r) => r.data),
     enabled: false,
   });
+
+  useEffect(() => {
+    if (availability && date) {
+      checkAvailability();
+    }
+  }, [time]);
 
   async function handleCheckAvailability(e) {
     e.preventDefault();
@@ -27,8 +49,10 @@ export default function Reservations() {
     checkAvailability();
   }
 
-  async function handleReserve() {
+  async function handleReserve(confirmOverlap) {
     if (!user) {
+      sessionStorage.setItem('redirect_after_login', '/reservations');
+      sessionStorage.setItem('reservation_form', JSON.stringify({ date, partySize, selectedTable, time, notes }));
       navigate('/auth/login');
       return;
     }
@@ -38,18 +62,31 @@ export default function Reservations() {
     }
     setLoading(true);
     try {
-      await client.post('/reservations/', {
+      const payload = {
         table: selectedTable,
         date,
         time,
         party_size: partySize,
         notes,
-      });
-      toast.success('Reservation created!');
+      };
+      if (confirmOverlap) payload.confirm_overlap = true;
+      const { data: reservation } = await client.post('/reservations/', payload);
+      setConfirmation(reservation);
       setSelectedTable(null);
       setDate('');
+      setTime('18:00');
+      setNotes('');
+      setPartySize(2);
     } catch (err) {
-      toast.error(err.response?.data?.error?.[0] || 'Failed to create reservation');
+      const data = err.response?.data;
+      if (err.response?.status === 409 && data?.overlap_warning) {
+        if (window.confirm(data.message || 'You already have a reservation at this time. Proceed anyway?')) {
+          return handleReserve(true);
+        }
+        return;
+      }
+      const message = data?.non_field_errors?.[0] || Object.values(data || {}).flat().find(Boolean) || 'Failed to create reservation';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -58,6 +95,12 @@ export default function Reservations() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12 sm:px-6">
       <h1 className="page-heading mb-8">Reserve a Table</h1>
+
+      {user && (
+        <Link to="/reservations/my" className="text-sm text-brand-600 hover:text-brand-700 font-medium inline-block mb-4">
+          View My Reservations &rarr;
+        </Link>
+      )}
 
       <div className="card-restaurant p-6 mb-6">
         <form onSubmit={handleCheckAvailability} className="flex flex-wrap gap-4 items-end">
@@ -112,7 +155,7 @@ export default function Reservations() {
         </div>
       )}
 
-      {selectedTable && (
+      {selectedTable && !confirmation && (
         <div className="card-restaurant p-6">
           <h2 className="section-title mb-4">Complete Reservation</h2>
           <div className="space-y-4">
@@ -139,6 +182,28 @@ export default function Reservations() {
               {loading ? 'Reserving...' : 'Confirm Reservation'}
             </button>
           </div>
+        </div>
+      )}
+
+      {confirmation && (
+        <div className="card-restaurant p-6 border-2 border-green-300 bg-green-50">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-2xl">&#10003;</span>
+            <h2 className="section-title mb-0">Reservation Confirmed</h2>
+          </div>
+          <div className="space-y-2 text-sm text-gray-700">
+            <p><span className="font-medium">Date:</span> {confirmation.date}</p>
+            <p><span className="font-medium">Time:</span> {confirmation.time}</p>
+            <p><span className="font-medium">Guests:</span> {confirmation.party_size}</p>
+            <p><span className="font-medium">Table:</span> {confirmation.table_detail?.number || confirmation.table}</p>
+            <p><span className="font-medium">Status:</span> <span className="capitalize">{confirmation.status}</span></p>
+          </div>
+          <button
+            onClick={() => setConfirmation(null)}
+            className="btn-primary w-full mt-4"
+          >
+            Make Another Reservation
+          </button>
         </div>
       )}
     </div>
