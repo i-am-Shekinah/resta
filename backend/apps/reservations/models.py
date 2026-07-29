@@ -27,7 +27,7 @@ class Reservation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ("-date", "-time")
+        ordering = ("date", "time")
 
     def __str__(self):
         return f"{self.customer.email} - {self.date} {self.time}"

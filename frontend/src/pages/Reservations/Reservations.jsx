@@ -15,6 +15,8 @@ export default function Reservations() {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmation, setConfirmation] = useState(null);
+  const [showOverlapModal, setShowOverlapModal] = useState(false);
+  const [overlapMessage, setOverlapMessage] = useState('');
 
   useEffect(() => {
     const saved = sessionStorage.getItem('reservation_form');
@@ -80,9 +82,8 @@ export default function Reservations() {
     } catch (err) {
       const data = err.response?.data;
       if (err.response?.status === 409 && data?.overlap_warning) {
-        if (window.confirm(data.message || 'You already have a reservation at this time. Proceed anyway?')) {
-          return handleReserve(true);
-        }
+        setOverlapMessage(data.message || 'You already have a reservation at this time. Proceed anyway?');
+        setShowOverlapModal(true);
         return;
       }
       const message = data?.non_field_errors?.[0] || Object.values(data || {}).flat().find(Boolean) || 'Failed to create reservation';
@@ -113,6 +114,15 @@ export default function Reservations() {
               className="input-field"
               min={new Date().toISOString().split('T')[0]}
               required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="input-field"
             />
           </div>
           <div>
@@ -178,7 +188,7 @@ export default function Reservations() {
                 placeholder="Any special requests..."
               />
             </div>
-            <button onClick={handleReserve} disabled={loading} className="btn-primary w-full">
+            <button onClick={() => handleReserve()} disabled={loading} className="btn-primary w-full">
               {loading ? 'Reserving...' : 'Confirm Reservation'}
             </button>
           </div>
@@ -204,6 +214,29 @@ export default function Reservations() {
           >
             Make Another Reservation
           </button>
+        </div>
+      )}
+
+      {showOverlapModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="card-restaurant p-6 mx-4 max-w-md w-full shadow-xl">
+            <h3 className="section-title mb-3">Already have a reservation</h3>
+            <p className="text-sm text-gray-600 mb-6">{overlapMessage}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowOverlapModal(false); handleReserve(true); }}
+                className="btn-primary flex-1"
+              >
+                Book Anyway
+              </button>
+              <button
+                onClick={() => setShowOverlapModal(false)}
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
