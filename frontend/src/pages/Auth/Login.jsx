@@ -11,9 +11,11 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setError('');
     setLoading(true);
     try {
       await login(email, password);
@@ -21,8 +23,10 @@ export default function Login() {
       const redirect = sessionStorage.getItem('redirect_after_login') || '/';
       sessionStorage.removeItem('redirect_after_login');
       navigate(redirect);
-    } catch {
-      toast.error('Invalid email or password');
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Invalid email or password';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -32,14 +36,19 @@ export default function Login() {
     <div className="max-w-md mx-auto px-4 py-20">
       <h1 className="page-heading text-center mb-8">Sign In</h1>
       <div className="card-restaurant p-8">
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 animate-shake">
+            {error}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input-field"
+              onChange={(e) => { setEmail(e.target.value); setError(''); }}
+              className={`input-field ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
               required
             />
           </div>
@@ -49,8 +58,8 @@ export default function Login() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-field pr-10"
+                onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                className={`input-field pr-10 ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                 required
               />
               <button
