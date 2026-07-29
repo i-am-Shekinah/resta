@@ -14,6 +14,7 @@ import Reservations from './pages/Reservations/Reservations';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import Dashboard from './pages/Dashboard/Dashboard';
+import Profile from './pages/Profile/Profile';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
                 <Route path="/auth/login" element={<Login />} />
                 <Route path="/auth/register" element={<Register />} />
                 <Route path="/dashboard/*" element={<Dashboard />} />
+                <Route path="/profile" element={<Profile />} />
               </Routes>
             </main>
             <footer className="border-t border-gray-200 bg-white py-8 text-center text-sm text-gray-500">
