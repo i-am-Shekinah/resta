@@ -1,7 +1,9 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.conf import settings
+import cloudinary
 import cloudinary.uploader
+from cloudinary.exceptions import Error as CloudinaryError
 from apps.accounts.models import Profile
 from apps.menu.models import Category, MenuItem, Modifier
 from apps.tables.models import Table
@@ -70,7 +72,7 @@ FOOD_IMAGES = {
     "fettuccine-alfredo": "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=400",
     "penne-arrabbiata": "https://images.unsplash.com/photo-1608219992759-8d74ed8d76eb?w=400",
     "grilled-salmon": "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400",
-    "fish-and-chips": "https://images.unsplash.com/photo-1579203149875-a78a0e72a35c?w=400",
+    "fish-and-chips": "https://images.unsplash.com/photo-1579208030886-b937da0925dc?w=400",
     "garlic-shrimp": "https://images.unsplash.com/photo-1559737558-2f5a35f4523b?w=400",
     "caesar-salad": "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400",
     "greek-salad": "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400",
@@ -356,29 +358,33 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Database seeded successfully"))
 
     def _seed_users(self):
-        admin, created = User.objects.get_or_create(
+        admin, admin_created = User.objects.get_or_create(
             email="admin@resta.com",
             defaults={"role": "admin", "is_staff": True, "is_superuser": True},
         )
-        if created:
+        if admin_created:
             admin.set_password("admin123")
             admin.save()
-            Profile.objects.get_or_create(
-                user=admin, defaults={"first_name": "Admin", "last_name": "User"}
-            )
             self.stdout.write(f"  Created admin user: admin@resta.com / admin123")
+        admin_profile, _ = Profile.objects.get_or_create(
+            user=admin, defaults={"first_name": "Admin", "last_name": "User"}
+        )
+        if not admin_profile.avatar:
+            self._upload_avatar(admin_profile, "Admin", "User")
 
-        staff, created = User.objects.get_or_create(
+        staff, staff_created = User.objects.get_or_create(
             email="staff@resta.com",
             defaults={"role": "staff", "is_staff": True},
         )
-        if created:
+        if staff_created:
             staff.set_password("staff123")
             staff.save()
-            Profile.objects.get_or_create(
-                user=staff, defaults={"first_name": "Staff", "last_name": "User"}
-            )
             self.stdout.write(f"  Created staff user: staff@resta.com / staff123")
+        staff_profile, _ = Profile.objects.get_or_create(
+            user=staff, defaults={"first_name": "Staff", "last_name": "User"}
+        )
+        if not staff_profile.avatar:
+            self._upload_avatar(staff_profile, "Staff", "User")
 
     def _seed_categories(self):
         for cat in CATEGORIES:
@@ -405,12 +411,12 @@ class Command(BaseCommand):
                 "is_featured": item["is_featured"],
                 "prep_time_minutes": item["prep_time_minutes"],
             }
-            if image_url:
-                defaults["image"] = image_url
             obj, created = MenuItem.objects.get_or_create(
                 slug=item["slug"],
                 defaults=defaults,
             )
+            if created and image_url:
+                self._upload_image(obj, image_url)
             changed = False
             if not created:
                 for field, val in [
@@ -425,7 +431,7 @@ class Command(BaseCommand):
                         setattr(obj, field, val)
                         changed = True
                 if image_url and not obj.image:
-                    obj.image = image_url
+                    self._upload_image(obj, image_url)
                     changed = True
                 if changed:
                     obj.save()
@@ -445,6 +451,25 @@ class Command(BaseCommand):
         except CloudinaryError as e:
             self.stdout.write(
                 self.style.WARNING(f"  Cloudinary upload failed for {obj.name}: {e}")
+            )
+
+    def _upload_avatar(self, profile, first_name, last_name):
+        name = f"{first_name}+{last_name}"
+        url = f"https://ui-avatars.com/api/?name={name}&background=dd5f08&color=fff&size=256"
+        try:
+            result = cloudinary.uploader.upload(
+                url,
+                folder="resta/avatars/",
+                public_id=f"user-{profile.user.id}",
+            )
+            profile.avatar = result["public_id"]
+            profile.save()
+            self.stdout.write(f"  Uploaded avatar for: {profile.user.email}")
+        except CloudinaryError as e:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  Avatar upload failed for {profile.user.email}: {e}"
+                )
             )
 
     def _seed_modifiers(self):
