@@ -36,6 +36,10 @@ export function AuthProvider({ children }) {
     });
   }
 
+  function updateUser(userData) {
+    setUser(userData);
+  }
+
   function logout() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -43,7 +47,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
