@@ -38,3 +38,23 @@ class MeView(APIView):
                 "profile": ProfileSerializer(profile).data,
             }
         )
+
+    def patch(self, request):
+        user = request.user
+        profile, _ = Profile.objects.get_or_create(user=user)
+
+        if "avatar" in request.FILES:
+            profile.avatar = request.FILES["avatar"]
+
+        for field in ("first_name", "last_name", "phone"):
+            if field in request.data:
+                setattr(profile, field, request.data[field])
+
+        profile.save()
+
+        return Response(
+            {
+                "user": UserSerializer(user).data,
+                "profile": ProfileSerializer(profile).data,
+            }
+        )
