@@ -241,15 +241,76 @@ function TablesManager() {
   );
 }
 
+function CustomerOverview() {
+  const { data: orders } = useQuery({
+    queryKey: ['my-orders'],
+    queryFn: () => client.get('/orders/').then((r) => r.data?.results || []),
+  });
+
+  const totalSpent = orders?.reduce((sum, o) => sum + parseFloat(o.total), 0) || 0;
+  const pendingOrders = orders?.filter((o) => o.status === 'pending').length || 0;
+  const completedOrders = orders?.filter((o) => o.status === 'completed').length || 0;
+  const recentOrders = orders?.slice(0, 5) || [];
+
+  return (
+    <div>
+      <h2 className="text-2xl font-display font-bold mb-6">My Dashboard</h2>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="card-restaurant p-6">
+          <p className="text-sm text-gray-500">Total Spent</p>
+          <p className="text-3xl font-bold text-green-600">${totalSpent.toFixed(2)}</p>
+        </div>
+        <div className="card-restaurant p-6">
+          <p className="text-sm text-gray-500">Total Orders</p>
+          <p className="text-3xl font-bold">{orders?.length || 0}</p>
+        </div>
+        <div className="card-restaurant p-6">
+          <p className="text-sm text-gray-500">Pending</p>
+          <p className="text-3xl font-bold text-yellow-600">{pendingOrders}</p>
+        </div>
+        <div className="card-restaurant p-6">
+          <p className="text-sm text-gray-500">Completed</p>
+          <p className="text-3xl font-bold text-green-600">{completedOrders}</p>
+        </div>
+      </div>
+
+      <h3 className="text-lg font-semibold mb-4">Recent Orders</h3>
+      {recentOrders.length === 0 ? (
+        <p className="text-gray-500">No orders yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {recentOrders.map((order) => (
+            <Link
+              key={order.id}
+              to={`/orders/${order.id}`}
+              className="card-restaurant p-4 flex items-center justify-between hover:shadow-md transition-shadow"
+            >
+              <div>
+                <p className="font-medium">Order #{order.id}</p>
+                <p className="text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString()}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`badge-status ${statusColors[order.status]}`}>{order.status}</span>
+                <span className="font-semibold">${order.total}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const location = useLocation();
 
-  if (!user || !['admin', 'staff'].includes(user.role)) {
+  if (!user) return null;
+
+  if (!['admin', 'staff'].includes(user.role)) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-20 text-center">
-        <h1 className="page-heading mb-4">Access Denied</h1>
-        <p className="text-gray-500">You need admin or staff privileges to access this page.</p>
+      <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+        <CustomerOverview />
       </div>
     );
   }
