@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import SearchFilter from '../../components/SearchFilter';
+import useDebounce from '../../hooks/useDebounce';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -15,10 +18,20 @@ const statusColors = {
 
 export default function Orders() {
   const { user } = useAuth();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDir, setSortDir] = useState('desc');
+  const debouncedSearch = useDebounce(search);
+
+  const params = {};
+  if (debouncedSearch) params.search = debouncedSearch;
+  if (statusFilter) params.status = statusFilter;
+  params.ordering = sortDir === 'desc' ? `-${sortField}` : sortField;
 
   const { data: orders } = useQuery({
-    queryKey: ['orders'],
-    queryFn: () => client.get('/orders/').then((r) => r.data),
+    queryKey: ['orders', debouncedSearch, statusFilter, sortField, sortDir],
+    queryFn: () => client.get('/orders/', { params }).then((r) => r.data),
     enabled: !!user,
   });
 
@@ -34,6 +47,39 @@ export default function Orders() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12 sm:px-6">
       <h1 className="page-heading mb-8">My Orders</h1>
+
+      <div className="mb-6">
+        <SearchFilter
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search orders..."
+          filters={[
+            {
+              label: 'Status',
+              value: statusFilter,
+              onChange: setStatusFilter,
+              options: [
+                { value: '', label: 'All statuses' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'confirmed', label: 'Confirmed' },
+                { value: 'preparing', label: 'Preparing' },
+                { value: 'ready', label: 'Ready' },
+                { value: 'served', label: 'Served' },
+                { value: 'completed', label: 'Completed' },
+                { value: 'cancelled', label: 'Cancelled' },
+              ],
+            },
+          ]}
+          sortField={sortField}
+          onSortFieldChange={setSortField}
+          sortFields={[
+            { value: 'created_at', label: 'Date' },
+            { value: 'total', label: 'Total' },
+          ]}
+          sortDir={sortDir}
+          onSortDirChange={setSortDir}
+        />
+      </div>
 
       {!orders?.results?.length ? (
         <p className="text-gray-500">No orders yet.</p>

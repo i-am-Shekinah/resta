@@ -15,6 +15,7 @@ export default function CustomSelect({
   options,
   className = '',
   buttonClassName = '',
+  placeholder = 'Select...',
 }) {
   const [open, setOpen] = useState(false);
   const [focusedIdx, setFocusedIdx] = useState(-1);
@@ -105,7 +106,7 @@ export default function CustomSelect({
         aria-expanded={open}
       >
         <span className={selected ? 'text-gray-900' : 'text-gray-400'}>
-          {selected ? selected.label : 'Select...'}
+          {selected ? selected.label : placeholder}
         </span>
         <ChevronDown
           size={16}

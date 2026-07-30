@@ -1,7 +1,11 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.filters import OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+import django_filters
 from django.db import models, transaction
+from django.db.models import Q
 from decimal import Decimal
 from .models import Cart, CartItem, Order, OrderItem
 from .serializers import (
@@ -12,6 +16,20 @@ from .serializers import (
     CheckoutSerializer,
 )
 from apps.menu.models import MenuItem, Modifier
+
+
+class OrderFilter(django_filters.FilterSet):
+    search = django_filters.CharFilter(method="filter_search")
+
+    def filter_search(self, queryset, name, value):
+        q = Q(notes__icontains=value)
+        if value.isdigit():
+            q |= Q(id=int(value))
+        return queryset.filter(q)
+
+    class Meta:
+        model = Order
+        fields = ["status"]
 
 
 class CartViewSet(viewsets.ViewSet):
@@ -73,6 +91,10 @@ class CartItemViewSet(viewsets.ModelViewSet):
 class OrderViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = (permissions.IsAuthenticated,)
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
+    filterset_class = OrderFilter
+    ordering_fields = ("created_at", "total", "status")
+    ordering = ("-created_at",)
 
     def get_queryset(self):
         user = self.request.user

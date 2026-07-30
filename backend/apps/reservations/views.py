@@ -1,14 +1,89 @@
+import json
+
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.filters import OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+import django_filters
+from django.db.models import Q
 from .models import Reservation
 from .serializers import ReservationSerializer, AvailabilityQuerySerializer
 from apps.tables.models import Table
+
+CONDITION_MAP = {
+    "eq": "exact",
+    "neq": "exact",
+    "icontains": "icontains",
+    "gte": "gte",
+    "lte": "lte",
+    "gt": "gt",
+    "lt": "lt",
+}
+
+
+class ReservationFilter(django_filters.FilterSet):
+    search = django_filters.CharFilter(method="filter_search")
+    status = django_filters.CharFilter(method="filter_status_list")
+    filters = django_filters.CharFilter(method="filter_advanced")
+
+    def filter_search(self, queryset, name, value):
+        q = Q(notes__icontains=value)
+        if value.isdigit():
+            q |= Q(table__number=int(value))
+        return queryset.filter(q)
+
+    def filter_status_list(self, queryset, name, value):
+        statuses = [s.strip() for s in value.split(",") if s.strip()]
+        if statuses:
+            return queryset.filter(status__in=statuses)
+        return queryset
+
+    def filter_advanced(self, queryset, name, value):
+        try:
+            rules = json.loads(value)
+        except (json.JSONDecodeError, TypeError):
+            return queryset
+        if not isinstance(rules, list):
+            return queryset
+
+        q_total = Q()
+        for rule in rules:
+            field = rule.get("field")
+            cond = rule.get("condition", "eq")
+            val = rule.get("value")
+            logic = rule.get("logic", "and")
+            if not field or val in (None, ""):
+                continue
+
+            if field not in ("status", "date", "time", "party_size", "notes"):
+                continue
+
+            lookup = CONDITION_MAP.get(cond, "exact")
+            if lookup == "exact" and cond == "neq":
+                q = ~Q(**{field: val})
+            else:
+                q = Q(**{f"{field}__{lookup}": val})
+
+            if logic == "or":
+                q_total |= q
+            else:
+                q_total &= q
+
+        return queryset.filter(q_total)
+
+    class Meta:
+        model = Reservation
+        fields = []
 
 
 class ReservationViewSet(viewsets.ModelViewSet):
     serializer_class = ReservationSerializer
     permission_classes = (permissions.IsAuthenticated,)
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
+    filterset_class = ReservationFilter
+    ordering_fields = ("date", "time", "created_at")
+    ordering = ("-created_at",)
 
     def get_queryset(self):
         user = self.request.user
@@ -60,8 +135,8 @@ class ReservationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["GET"])
     def my(self, request):
-        reservations = Reservation.objects.filter(customer=request.user)
-        serializer = self.get_serializer(reservations, many=True)
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=["GET"])

@@ -3,23 +3,50 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { UtensilsCrossed } from 'lucide-react';
 import client from '../../api/client';
+import SearchFilter from '../../components/SearchFilter';
+import useDebounce from '../../hooks/useDebounce';
 
 export default function Menu() {
   const [activeCategory, setActiveCategory] = useState(null);
+  const [search, setSearch] = useState('');
+  const [sortField, setSortField] = useState('');
+  const [sortDir, setSortDir] = useState('asc');
+  const debouncedSearch = useDebounce(search);
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: () => client.get('/menu/categories/').then((r) => r.data),
   });
 
+  const params = {};
+  if (activeCategory) params.category__slug = activeCategory;
+  if (debouncedSearch) params.search = debouncedSearch;
+  if (sortField) params.ordering = sortDir === 'desc' ? `-${sortField}` : sortField;
+
   const { data: items } = useQuery({
-    queryKey: ['menu-items', activeCategory],
-    queryFn: () => client.get('/menu/items/', { params: activeCategory ? { category__slug: activeCategory } : {} }).then((r) => r.data),
+    queryKey: ['menu-items', activeCategory, debouncedSearch, sortField, sortDir],
+    queryFn: () => client.get('/menu/items/', { params }).then((r) => r.data),
   });
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
       <h1 className="page-heading mb-8">Our Menu</h1>
+
+      <div className="mb-6">
+        <SearchFilter
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search menu items..."
+          sortField={sortField}
+          onSortFieldChange={setSortField}
+          sortFields={[
+            { value: 'name', label: 'Name' },
+            { value: 'price', label: 'Price' },
+          ]}
+          sortDir={sortDir}
+          onSortDirChange={setSortDir}
+        />
+      </div>
 
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
         <button

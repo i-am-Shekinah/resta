@@ -3,6 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import FilterBar from '../../components/FilterBar';
+import QuickFilterPopover from '../../components/QuickFilterPopover';
+import AdvancedFilterModal from '../../components/AdvancedFilterModal';
+import useDebounce from '../../hooks/useDebounce';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -11,16 +15,62 @@ const statusColors = {
   completed: 'bg-green-100 text-green-800',
 };
 
+function statusOptions(selected) {
+  return [
+    { value: 'pending', label: 'Pending', checked: selected.includes('pending') },
+    { value: 'confirmed', label: 'Confirmed', checked: selected.includes('confirmed') },
+    { value: 'completed', label: 'Completed', checked: selected.includes('completed') },
+    { value: 'cancelled', label: 'Cancelled', checked: selected.includes('cancelled') },
+  ];
+}
+
 export default function MyReservations() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [cancellingId, setCancellingId] = useState(null);
+  const [search, setSearch] = useState('');
+  const [quickStatus, setQuickStatus] = useState([]);
+  const [advancedRules, setAdvancedRules] = useState([]);
+  const [showQuickFilter, setShowQuickFilter] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [sortDir, setSortDir] = useState('asc');
+  const debouncedSearch = useDebounce(search);
+
+  const params = {};
+  if (debouncedSearch) params.search = debouncedSearch;
+  if (quickStatus.length) params.status = quickStatus.join(',');
+  if (advancedRules.length) params.filters = JSON.stringify(advancedRules);
+  params.ordering = sortDir === 'desc' ? '-date' : 'date';
 
   const { data: reservations } = useQuery({
-    queryKey: ['my-reservations'],
-    queryFn: () => client.get('/reservations/my/').then((r) => r.data),
+    queryKey: ['my-reservations', debouncedSearch, quickStatus, advancedRules, sortDir],
+    queryFn: () => client.get('/reservations/my/', { params }).then((r) => r.data),
     enabled: !!user,
   });
+
+  function handleQuickStatusToggle(value, checked) {
+    setQuickStatus((prev) =>
+      checked ? [...prev, value] : prev.filter((v) => v !== value),
+    );
+  }
+
+  function resetQuickFilters() {
+    setQuickStatus([]);
+  }
+
+  function handleApplyAdvanced(rules) {
+    setAdvancedRules(rules);
+  }
+
+  function toggleQuickFilter() {
+    setShowQuickFilter((v) => !v);
+    setShowAdvanced(false);
+  }
+
+  function toggleAdvanced() {
+    setShowAdvanced((v) => !v);
+    setShowQuickFilter(false);
+  }
 
   async function handleCancel(id) {
     setCancellingId(id);
@@ -49,6 +99,46 @@ export default function MyReservations() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-12 sm:px-6">
       <h1 className="page-heading mb-8">My Reservations</h1>
+
+      <div className="mb-6 relative">
+        <FilterBar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search reservations..."
+          sortDir={sortDir}
+          onSortDirChange={setSortDir}
+          quickFilterActive={quickStatus.length > 0}
+          onQuickFilterToggle={toggleQuickFilter}
+          advancedActive={advancedRules.length > 0}
+          onAdvancedToggle={toggleAdvanced}
+          onClearAdvanced={() => setAdvancedRules([])}
+        />
+
+        <QuickFilterPopover
+          open={showQuickFilter}
+          onClose={() => setShowQuickFilter(false)}
+          sections={[
+            {
+              id: 'status',
+              label: 'Status',
+              options: statusOptions(quickStatus),
+              onChange: handleQuickStatusToggle,
+            },
+          ]}
+          onReset={resetQuickFilters}
+        />
+
+        <AdvancedFilterModal
+          open={showAdvanced}
+          onClose={() => setShowAdvanced(false)}
+          onApply={handleApplyAdvanced}
+          initialRules={advancedRules}
+        />
+      </div>
+
+      {showQuickFilter && (
+        <div className="fixed inset-0 z-40" onClick={() => setShowQuickFilter(false)} />
+      )}
 
       {!reservations?.length ? (
         <p className="text-gray-500">No reservations yet.</p>
