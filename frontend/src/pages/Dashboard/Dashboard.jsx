@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import client from '../../api/client';
 import toast from 'react-hot-toast';
+import CustomSelect from '../../components/CustomSelect';
 
 const navItems = [
   { path: '/dashboard', label: 'Overview', end: true },
@@ -130,15 +131,13 @@ function OrdersManager() {
               <span className="font-medium">Order #{order.id} — {order.user}</span>
               <div className="flex items-center gap-2">
                 <span className={`badge-status ${statusColors[order.status]}`}>{order.status}</span>
-                <select
+                <CustomSelect
                   value={order.status}
-                  onChange={(e) => updateStatus(order.id, e.target.value)}
-                  className="text-sm border border-gray-300 rounded-lg px-2 py-1"
-                >
-                  {['pending', 'confirmed', 'preparing', 'ready', 'served', 'completed', 'cancelled'].map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+                  onChange={(v) => updateStatus(order.id, v)}
+                  options={['pending', 'confirmed', 'preparing', 'ready', 'served', 'completed', 'cancelled']}
+                  className="w-36"
+                  buttonClassName="py-1.5"
+                />
               </div>
             </div>
             <p className="text-sm text-gray-500">${order.total} — {new Date(order.created_at).toLocaleString()}</p>
@@ -178,15 +177,13 @@ function ReservationsManager() {
               </div>
               <div className="flex items-center gap-2">
                 <span className={`badge-status ${statusColors[r.status] || 'bg-gray-100'}`}>{r.status}</span>
-                <select
+                <CustomSelect
                   value={r.status}
-                  onChange={(e) => updateStatus(r.id, e.target.value)}
-                  className="text-sm border border-gray-300 rounded-lg px-2 py-1"
-                >
-                  {['pending', 'confirmed', 'cancelled', 'completed'].map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+                  onChange={(v) => updateStatus(r.id, v)}
+                  options={['pending', 'confirmed', 'cancelled', 'completed']}
+                  className="w-36"
+                  buttonClassName="py-1.5"
+                />
               </div>
             </div>
           </div>
@@ -225,15 +222,12 @@ function TablesManager() {
               </span>
             </div>
             <p className="text-sm text-gray-500">{table.capacity} seats — {table.location}</p>
-            <select
+            <CustomSelect
               value={table.status}
-              onChange={(e) => updateTable(table.id, 'status', e.target.value)}
-              className="mt-2 text-sm border border-gray-300 rounded-lg px-2 py-1 w-full"
-            >
-              {['available', 'reserved', 'occupied'].map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+              onChange={(v) => updateTable(table.id, 'status', v)}
+              options={['available', 'reserved', 'occupied']}
+              className="mt-2"
+            />
           </div>
         ))}
       </div>

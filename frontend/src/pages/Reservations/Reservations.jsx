@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import client from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import CustomSelect from '../../components/CustomSelect';
 
 export default function Reservations() {
   const { user } = useAuth();
@@ -127,11 +128,14 @@ export default function Reservations() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Party Size</label>
-            <select value={partySize} onChange={(e) => setPartySize(Number(e.target.value))} className="input-field">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                <option key={n} value={n}>{n} {n === 1 ? 'Guest' : 'Guests'}</option>
-              ))}
-            </select>
+            <CustomSelect
+              value={partySize}
+              onChange={setPartySize}
+              options={[1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
+                value: n,
+                label: `${n} ${n === 1 ? 'Guest' : 'Guests'}`,
+              }))}
+            />
           </div>
           <button type="submit" className="btn-primary">Check Availability</button>
         </form>
