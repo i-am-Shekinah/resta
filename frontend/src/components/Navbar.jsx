@@ -61,6 +61,10 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  useEffect(() => {
+    setDropdownOpen(false);
+  }, [user]);
+
   function handleLogout() {
     logout();
     navigate('/');
