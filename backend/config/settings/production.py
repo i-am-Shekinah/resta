@@ -12,7 +12,7 @@ ALLOWED_HOSTS = config(
 
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="https://*.onrender.com",
+    default="",
     cast=lambda v: [s.strip() for s in v.split(",")],
 )
 

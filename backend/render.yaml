@@ -23,27 +23,10 @@ services:
         value: https://resta-api.onrender.com,https://resta.vercel.app
       - key: CLOUDINARY_URL
         sync: false
-      - key: DATABASE_NAME
+      - key: DATABASE_URL
         fromDatabase:
           name: resta-db
-          property: database
-      - key: DATABASE_USER
-        fromDatabase:
-          name: resta-db
-          property: user
-      - key: DATABASE_PASSWORD
-        fromDatabase:
-          name: resta-db
-          property: password
-      - key: DATABASE_HOST
-        fromDatabase:
-          name: resta-db
-          property: host
-      - key: DATABASE_PORT
-        fromDatabase:
-          name: resta-db
-          property: port
-
+          property: connectionString
 databases:
   - name: resta-db
     region: oregon
