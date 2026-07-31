@@ -20,7 +20,7 @@ services:
       - key: CORS_ALLOWED_ORIGINS
         value: https://resta.vercel.app
       - key: CSRF_TRUSTED_ORIGINS
-        value: https://resta-api.onrender.com,https://resta.vercel.app
+        value: https://resta-api-y49p.onrender.com,https://resta.vercel.app
       - key: CLOUDINARY_URL
         sync: false
       - key: DATABASE_URL
