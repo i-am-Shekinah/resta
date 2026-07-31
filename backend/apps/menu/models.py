@@ -40,7 +40,7 @@ class MenuItem(models.Model):
 
 
 class Modifier(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     price = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     max_selections = models.PositiveIntegerField(default=1)
     menu_items = models.ManyToManyField(MenuItem, related_name="modifiers", blank=True)

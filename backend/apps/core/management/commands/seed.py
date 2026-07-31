@@ -415,30 +415,10 @@ class Command(BaseCommand):
                 slug=item["slug"],
                 defaults=defaults,
             )
-            if created and image_url:
-                self._upload_image(obj, image_url)
-            changed = False
-            if not created:
-                for field, val in [
-                    ("name", item["name"]),
-                    ("category", category),
-                    ("description", item["description"]),
-                    ("price", item["price"]),
-                    ("is_featured", item["is_featured"]),
-                    ("prep_time_minutes", item["prep_time_minutes"]),
-                ]:
-                    if getattr(obj, field) != val:
-                        setattr(obj, field, val)
-                        changed = True
-                if image_url and not obj.image:
+            if created:
+                if image_url:
                     self._upload_image(obj, image_url)
-                    changed = True
-                if changed:
-                    obj.save()
-            if created or changed:
-                self.stdout.write(
-                    f"  {'Created' if created else 'Updated'} menu item: {obj.name}"
-                )
+                self.stdout.write(f"  Created menu item: {obj.name}")
 
     def _upload_image(self, obj, image_url):
         try:
@@ -474,7 +454,7 @@ class Command(BaseCommand):
 
     def _seed_modifiers(self):
         for mod in MODIFIERS:
-            obj, created = Modifier.objects.update_or_create(
+            obj, created = Modifier.objects.get_or_create(
                 name=mod["name"],
                 defaults={
                     "price": mod["price"],
