@@ -1,6 +1,8 @@
+import os
+
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from django.conf import settings
+from django.utils.crypto import get_random_string
 import cloudinary
 import cloudinary.uploader
 from cloudinary.exceptions import Error as CloudinaryError
@@ -363,9 +365,11 @@ class Command(BaseCommand):
             defaults={"role": "admin", "is_staff": True, "is_superuser": True},
         )
         if admin_created:
-            admin.set_password("admin123")
+            admin.set_password(
+                self._get_password("SEED_ADMIN_PASSWORD", "admin@resta.com")
+            )
             admin.save()
-            self.stdout.write(f"  Created admin user: admin@resta.com / admin123")
+            self.stdout.write("  Created admin user: admin@resta.com")
         admin_profile, _ = Profile.objects.get_or_create(
             user=admin, defaults={"first_name": "Admin", "last_name": "User"}
         )
@@ -377,14 +381,28 @@ class Command(BaseCommand):
             defaults={"role": "staff", "is_staff": True},
         )
         if staff_created:
-            staff.set_password("staff123")
+            staff.set_password(
+                self._get_password("SEED_STAFF_PASSWORD", "staff@resta.com")
+            )
             staff.save()
-            self.stdout.write(f"  Created staff user: staff@resta.com / staff123")
+            self.stdout.write("  Created staff user: staff@resta.com")
         staff_profile, _ = Profile.objects.get_or_create(
             user=staff, defaults={"first_name": "Staff", "last_name": "User"}
         )
         if not staff_profile.avatar:
             self._upload_avatar(staff_profile, "Staff", "User")
+
+    def _get_password(self, env_key, email):
+        password = os.environ.get(env_key, "").strip()
+        if password:
+            return password
+        password = get_random_string(16)
+        self.stdout.write(
+            self.style.WARNING(
+                f"  No {env_key} set; created temporary password for {email}: {password}"
+            )
+        )
+        return password
 
     def _seed_categories(self):
         for cat in CATEGORIES:
